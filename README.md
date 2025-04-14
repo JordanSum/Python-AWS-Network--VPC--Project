@@ -3,8 +3,7 @@
 Welcome to the AWS Network Automation with Python project! 🚀 This script is designed to automate the creation of a fully functional AWS network environment using Python and the AWS SDK (boto3). Whether you're a cloud enthusiast, a DevOps engineer, or just someone looking to simplify AWS networking tasks, this project has you covered.
 
 >!IMPORTANT
->
->TThis script is intended for educational and testing purposes. Be mindful of AWS costs when creating resources, and clean up resources when you're done to avoid unnecessary charges. 
+>This script is intended for educational and testing purposes. Be mindful of AWS costs when creating resources, and clean up resources when you're done to avoid unnecessary charges. 
 
 ## What Does This Script Do?
 
