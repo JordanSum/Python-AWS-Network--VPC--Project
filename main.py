@@ -1,7 +1,9 @@
 import boto3 # For AWS SDK
 import requests # For fetching public IP
-import os
+import os # For creating file operations on local machine
 
+# Create a key pair for SSH access to the EC2 instance. This is now a required step for creating an EC2 instance in AWS.
+# This function creates a key pair in AWS EC2 and saves the private key to a file.
 def create_key_pair():
     ec2 = boto3.client('ec2')
 
@@ -10,7 +12,7 @@ def create_key_pair():
         key_pair = ec2.create_key_pair(KeyName=key_name)
         private_key = key_pair['KeyMaterial']
 
-        # Save the private key to a file
+        # Save the private key to a file named what the variable key_name is set to
         with open(f"{key_name}.pem", "w") as file:
             file.write(private_key)
 
@@ -32,10 +34,8 @@ def get_public_ip():
         print(f"Error fetching public IP: {e}")
         return None
 
-def create_vpc(key_name):
+def create_vpc(key_name, public_ip):
     client = boto3.client('ec2')
-
-    dry_run = True  # Set to True for testing without making changes
 
     vpc = client.create_vpc(
         CidrBlock="10.0.0.0/16",
@@ -172,7 +172,7 @@ def create_vpc(key_name):
                 'Tags': [
                     {
                         'Key': 'Name', 
-                        'Value': 'Python_Python_Internet_Gateway',
+                        'Value': 'Python_Internet_Gateway',
                     },
                     {
                         'Key': 'Project',
@@ -287,45 +287,53 @@ def create_vpc(key_name):
 
     # Create a ec2 instance in the public subnet
     ec2 = boto3.resource('ec2')
-    instance = ec2.create_instances(
-        ImageId='ami-087f352c165340ea1',  # Replace with a valid AMI ID
-        MinCount=1,
-        MaxCount=1,
-        InstanceType='t2.micro',
-        SecurityGroupIds=[security_group_id],
-        KeyName=key_name,  # Replace with your key pair name in order to SSH into the instance
-        SubnetId=public_subnet_id,
-        TagSpecifications=[
-            {
-                'ResourceType': 'instance',
-                'Tags': [
-                    {
-                        'Key': 'Name',
-                        'Value': 'Python_Project_Instance',
-                    },
-                    {
-                        'Key': 'Project',
-                        'Value': 'Networking_Automation'
-                    },
-                ]
-            },
-        ],
-        DryRun=dry_run,
-    )
-    instance_id = instance[0].id
+    instance_id = None
 
-        # Wait for the instance to be in the running state
-    ec2_client = boto3.client('ec2')
-    ec2_client.get_waiter('instance_running').wait(InstanceIds=[instance_id])
+    try:
+        instance = ec2.create_instances(
+            ImageId='ami-087f352c165340ea1',  # Replace with a valid AMI ID
+            MinCount=1,
+            MaxCount=1,
+            InstanceType='t2.micro',
+            SecurityGroupIds=[security_group_id],
+            KeyName=key_name,  # Replace with your key pair name in order to SSH into the instance
+            SubnetId=public_subnet_id,
+            TagSpecifications=[
+                {
+                    'ResourceType': 'instance',
+                    'Tags': [
+                        {
+                            'Key': 'Name',
+                            'Value': 'Python_Project_Instance',
+                        },
+                        {
+                            'Key': 'Project',
+                            'Value': 'Networking_Automation'
+                        },
+                    ]
+                },
+            ],
+            DryRun=dry_run,
+        )
+        instance_id = instance[0].id
+    except Exception as e:
+        print("Error creating EC2 instance: Instance creation failed.")
 
-    # Retrieve the public IP address of the instance
-    instance_details = ec2_client.describe_instances(InstanceIds=[instance_id])
-    public_ip_address = instance_details['Reservations'][0]['Instances'][0].get('PublicIpAddress')
+    # Wait for the instance to be in the running state
+    if instance_id is not None:
+        ec2_client = boto3.client('ec2')
+        ec2_client.get_waiter('instance_running').wait(InstanceIds=[instance_id])
 
-    if public_ip_address:
-        print(f"Public IP Address retrieved for the instance!")
+        # Retrieve the public IP address of the instance
+        instance_details = ec2_client.describe_instances(InstanceIds=[instance_id])
+        public_ip_address = instance_details['Reservations'][0]['Instances'][0].get('PublicIpAddress')
+
+        if public_ip_address:
+            print(f"Public IP Address retrieved for the instance!")
+        else:
+            print("Instance does not have a public IP address assigned.")
     else:
-        print("Instance does not have a public IP address assigned.")
+        print("Instance creation failed. No instance ID returned.")
 
     return vpc_id, private_subnet_id, public_subnet_id, InternetGatewayId, public_route_table_id, private_route_table_id
 
@@ -354,8 +362,9 @@ vpc_id = None
 if __name__ == "__main__":
     key_name=create_key_pair()
     public_ip = get_public_ip()
+    dry_run = input("Dry run? (yes/no): ").strip().lower() == "yes"
     if public_ip:
-        vpc_id, private_subnet_id, public_subnet_id, InternetGatewayId, public_route_table_id, private_route_table_id = create_vpc(key_name)
+        vpc_id, private_subnet_id, public_subnet_id, InternetGatewayId, public_route_table_id, private_route_table_id = create_vpc(key_name, public_ip)
         enable_dns_support_and_hostname(vpc_id)
         print(f"VPC ID: {vpc_id}")
         print(f"Private Subnet ID: {private_subnet_id}")

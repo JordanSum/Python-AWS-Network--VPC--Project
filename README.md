@@ -1,4 +1,4 @@
-# AWS Network Automation with Python Project.
+# AWS Network Automation with Python.
 
 Welcome to the AWS Network Automation with Python project! 🚀 This script is designed to automate the creation of a fully functional AWS network environment using Python and the AWS SDK (boto3). Whether you're a cloud enthusiast, a DevOps engineer, or just someone looking to simplify AWS networking tasks, this project has you covered.
 
@@ -54,7 +54,7 @@ Setting up AWS networking manually can be time-consuming and error-prone. This s
 2. Create a python environment to install dependencies
 3. Install the required Python dependencies:
 ``` console 
-pip install boto3 requests
+pip install -r requirements.txt
 ```
 4. Ensure your AWS credentials are configured (using AWS CLI)
 5. Change "dry_run = True" --> "dry_run = False" to avoid testing
